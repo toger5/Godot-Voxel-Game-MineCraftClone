@@ -3,7 +3,7 @@ This is a Godot project. The main purpose of this project is to get familier wit
 
 ![GitHub Logo](/screenshots/screenshot1.PNG)
 
-**Project Overview**
+**Project Overview**  
 To achive a decent performance and as a consequence a decent rendering distance of the world I only generate the top surface of the terrain (so the surface is created out of one single plane and not by multiple cubes (as I did it in the minecraft blender game engine project on my git hub page))
 Therefore I used the godot datatool to manipulate and create single face and UV maps.
 
