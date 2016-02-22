@@ -11,6 +11,7 @@ Therefore I used the godot datatool to manipulate and create single face and UV 
 If you want to test the game:
 * just download or clone the repository
 * than download Godot [Godot](http://www.godotengine.org/)
+* start the Godot client
 * scan for project and choose the downloaded unzipped folder
 
 **features**  
