@@ -21,7 +21,7 @@ var packed_Collider = load("CubeCollider.scn")
 
 var generateCoord
 var generateStatus = 10
-
+var thread = Thread.new()
 # variablen fuer mehr_frame actionen
 var x_for_filling = 0
 var z_for_filling = 0
@@ -44,7 +44,8 @@ func process():
 	elif not isReady:
 		makeReady()
 	elif not isColliderCreated:
-		block_collider_initialisation()
+		#block_collider_initialisation()
+		isColliderCreated = true
 	elif not isbuilded:
 	 	build_chunk(position)
 	else:
@@ -64,6 +65,7 @@ func hide():
 		shouldBeShown = false
 		var mesh = wg.wg_mesh.get_mesh()
 		mesh.surface_remove(surfaceIndex)
+		print("surface removed ",surfaceIndex)
 		for c in wg.chunk_dict:
 			if wg.get_surfaceIndex(c) != null:
 				var index = wg.get_surfaceIndex(c)
@@ -136,26 +138,129 @@ func block_collider_initialisation():
 	isColliderCreated = true
 	
 func activate_physic():
+	if not thread.is_active():
+		#print("activate thread started")
+		thread.start(self,"aactivate_physic")
+	else:
+		thread.wait_to_finish()
+		#print("tried to start active thread")
+	
+func aactivate_physic(trash):
+	
 	if not isPhysic and isColliderCreated:
 		var world = wg.get_node("world")
+		var blocks_per_frame = 100
+		var counter = 0
 		for c in collsion_blocks:#range(10):
 			if c.get_parent() != world:
-				world.add_child(c)
+				counter += 1
+				world.call_deferred("add_child",(c))
+				if counter > blocks_per_frame:
+					counter = 0
+					yield(world.get_tree(),"idle_frame")
 		#max einen chunc pro frame bauen dann sollte das genuegend performace geben
-		
+		print("physics are created")
 		isPhysic = true
 		
-func deactivate_physic():
+func deactivate_physic(trash):
+	if not thread.is_active():
+		#print("deactivate thread started")
+		thread.start(self,"ddeactivate_physic")
+	else:
+		thread.wait_to_finish()
+		#print("tried to start deactive thread")
+		
+func ddeactivate_physic():
+	
 	if isPhysic:
 		var world = wg.get_node("world")
 		#for i in range(world.get_child_count()):    
+		var blocks_per_frame = 10
+		var counter = 0
+		print("!start colbblockcreation")
 		for c in collsion_blocks: 
-		 	world.remove_child(c)
+			if c.get_parent() == world:
+				world.call_deferred("remove_child",c)
+				if counter > blocks_per_frame:
+					counter = 0
+					yield(world.get_tree(),"idle_frame")
 		#erstaml alles in eine Liste reinhauen und dann jedes frame etwas davon löschen
 		# in einer weiteren process function oder sogar in die momentane mit ifs integriert......
 		#diese liste wird erst bearbeitet wenn die anderen chunks gebaut worden sind
 			#world.remove_child(world.get_child(0))
 		isPhysic = false
+		
+		
+func remove_block(pos):
+	print(pos)
+	if pos in blocks_at_surface:
+		var mesh = wg.wg_mesh.get_mesh()
+		wg.surface.begin(VisualServer.PRIMITIVE_TRIANGLES)
+		wg.surface.set_material(wg.material)
+		ChunkVoxel.erase(pos)
+		blocks_at_surface.erase(pos)
+		
+	#	for vI in range(datatool.get_vertex_count()):
+	#		var v_pos = datatool.get_vertex(vI)
+	#		var v_n = datatool.get_vertex_normal(vI)
+	#		var v_uv = datatool.get_vertex_uv(vI)
+	#		#print("claorBlock v_n = ",v_n)
+	#		var needed = true
+	#		var diff = pos - v_pos
+	#		if abs(diff.x) == 0.5 and abs(diff.y) == 0.5 and abs(diff.z) == 0.5:
+	#			print("aaaa")
+	#			var face = datatool.get_vertex_faces(vI)[0]
+	#			var counter_for_all_verts_of_the_face = 0
+	#			for i in range(3):
+	#				var checkVector = pos - datatool.get_vertex(datatool.get_face_vertex(face,i))
+	#				if abs(checkVector.x) == 0.5 and abs(checkVector.y) == 0.5 and abs(checkVector.z) == 0.5:
+	#					counter_for_all_verts_of_the_face += 1
+	#			if counter_for_all_verts_of_the_face == 3:
+	#				needed = false
+	#
+	#		if needed:
+	#			
+	#			wg.surface.add_uv(v_uv)
+	#			wg.surface.add_normal(v_n)
+	#			wg.surface.add_vertex(v_pos)
+			#else:
+				#print("not needed: ",v_pos,"nor ist: ",v_n)
+		
+		for fI in range(datatool.get_face_count()):
+			var v_pos = datatool.get_vertex(datatool.get_face_vertex(fI,0)) #bekomme index eines verts der face
+			var diff = pos - v_pos
+			var needed = true
+			if abs(diff.x) == 0.5 and abs(diff.y) == 0.5 and abs(diff.z) == 0.5: #cheken ob es überhaupt in frage kommt
+				var counter_for_all_verts_of_the_face = 1
+				for i in range(2):
+					var checkVector = pos - datatool.get_vertex(datatool.get_face_vertex(fI,i+1))
+					if abs(checkVector.x) == 0.5 and abs(checkVector.y) == 0.5 and abs(checkVector.z) == 0.5: #fuer alle anderen verts der face checken
+						counter_for_all_verts_of_the_face += 1
+					if counter_for_all_verts_of_the_face == 3:#wenn alle teil einer zu löschendn face sind dann face nicht machen
+						needed = false
+			if needed:
+				for i in range(3):
+					var vIndex = datatool.get_face_vertex(fI,i)
+					wg.surface.add_uv(datatool.get_vertex_uv(vIndex))
+					wg.surface.add_normal(datatool.get_vertex_normal(vIndex))
+					wg.surface.add_vertex(datatool.get_vertex(vIndex))
+			else:
+				print("wurden nicht gebraucht")
+		for voxel_r in check_surrounding_voxel_normal(pos):
+			var voxel_pos = pos + voxel_r
+			if not voxel_pos in blocks_at_surface:
+				print("added ",voxel_pos," to vox at surface")
+				blocks_at_surface.push_back(voxel_pos)
+			face_at(voxel_pos,-voxel_r,1)#ChunkVoxel[voxel_pos])muss noch nach voxeln im anderen chunc suchen
+		
+		datatool.create_from_surface(wg.surface.commit(), 0)
+		hide()
+		isShown = true
+		shouldBeShown = true
+		surfaceIndex = mesh.get_surface_count()
+		datatool.commit_to_surface(mesh)
+		wg.get_node("Player").collider.refresh(wg.get_node("Player").get_pos_int())
+		print("surface added ",surfaceIndex)
 		
 func build_chunk(pos):
 
@@ -177,7 +282,7 @@ func build_chunk(pos):
 	if generateStatus == 2:
 		#print("generation is done now the chunc should be shown because: ",shouldBeShown)
 		isbuilded = true
-		wg.surface.index()
+		#wg.surface.index()
 		datatool.create_from_surface(wg.surface.commit(), 0)
 		#print("datatool created ",isbuilded)
 		if shouldBeShown:
@@ -218,6 +323,15 @@ func check_surrounding_voxel(pos):
 				richtungen_liste.append(0)
 			else:
 				richtungen_liste.append(1)
+
+	return richtungen_liste
+	
+func check_surrounding_voxel_normal(pos):
+	var richtungen_liste = []
+	for nor in [Vector3(1,0,0),Vector3(0,1,0),Vector3(0,0,1)]:
+		for f in [1,-1]:
+			if check_voxel(pos+nor*f):
+				richtungen_liste.append(nor*f)
 
 	return richtungen_liste
 

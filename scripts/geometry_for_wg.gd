@@ -51,8 +51,7 @@ func _input(event):
 		if event.scancode == KEY_B:
 			chunk_dict[Vector2(0,0)].show()
 		if event.scancode == KEY_C:
-			for c in chunk_dict:
-				chunk_dict[c].hide()
+			chunk_dict[Vector2(0,0)].remove_block(Vector3(6,12,4))
 		if event.scancode == KEY_1:
 			generateCoord.y = 16
 		if event.scancode == KEY_2:
@@ -112,7 +111,7 @@ func build_neededChuncsList(pos):
 	return l
 
 func entered_new_chunk(dir,chunk_pos): #character changed chunc position
-	print(chunk_pos)
+	#print(chunk_pos)
 	ringlist = build_neededChuncsList(chunk_pos)
 	#hide chunks which are aout of range
 	for i in range(-RANGE,RANGE+1):
@@ -127,7 +126,6 @@ func hide_hidelist_chunks():
 		if hidelist[0] in chunk_dict:
 			chunk_dict[hidelist[0]].hide()
 		hidelist.remove(0)
-		print(hidelist)
 			
 func get_surfaceIndex(position):
 	return chunk_dict[position].surfaceIndex
@@ -192,5 +190,5 @@ func process_chunks():
 			processing_chunks[0].process()
 		else:
 			processing_chunks.remove(0)
-			get_node("Player").createInitialPhysic()
+			#get_node("Player").createInitialPhysic()
 			#print("Chunk FertiG!!!!! anzahl an noch zu berechenenden chunks: ", processing_chunks.size())
