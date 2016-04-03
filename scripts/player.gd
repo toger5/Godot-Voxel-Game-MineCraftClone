@@ -8,7 +8,6 @@ export var speed = 0.2
 export var boost = 2
 export var Jump_Speed = 1.0
 onready var collider = colliderClass.new(10,get_pos_int(), self, get_node("/root/Node/PlayerCollision"))
-var b
 var active = true
 var in_air = false
 var cam
@@ -17,11 +16,12 @@ var lastChunk = Vector2(0,0)
 var destroy_oneBlock = false
 
 func _ready():
+	Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
 	cam = get_node("Camera")
 	set_fixed_process(true)
 	Input.warp_mouse_pos(get_viewport().get_rect().size * 0.5)
 	lastChunk = getCurrentChunk() + Vector2(1,0)
-	
+	get_node("Camera/RayClick").add_exception(self)
 func getCurrentChunk():
 	var intpos = Vector2(int(get_translation().x),int(get_translation().z))
 	return Vector2(floor(intpos.x/16.0)*16, floor(intpos.y/16.0)*16)
@@ -58,7 +58,7 @@ func _fixed_process(delta):
 #				
 				
 		#call function for nwe generation ring
-		get_parent().entered_new_chunk(dir,currentChunk)
+		get_node("/root/Node").entered_new_chunk(dir,currentChunk)
 #	var chunkx = floor(intpos.x/16.0)*16
 #	var chunky = floor(intpos.y/16.0)*16
 	
@@ -78,9 +78,9 @@ func _fixed_process(delta):
 		print(active)
 	if Input.is_action_pressed("jump"):
 		jumpen()
-	if Input.is_action_pressed("ui_focus_next") and not destroy_oneBlock:
+	if Input.is_action_pressed("l_click") and not destroy_oneBlock:
 		destroyClickedBlock()
-	if not Input.is_action_pressed("ui_focus_next"):
+	if not Input.is_action_pressed("l_click"):
 		destroy_oneBlock = false
 		#in_air = true
 
@@ -104,7 +104,7 @@ func _fixed_process(delta):
 		#move(KEY_Q,get_transform().basis.xform(Vector3(0,-1,0)))
 		#move(KEY_E,get_transform().basis.xform(Vector3(0,1,0)))
 func move(k,dir):
-	b = 1
+	var b = 1
 	if(Input.is_key_pressed(k)):
 		if(Input.is_key_pressed(KEY_SHIFT)):
 			b = boost
@@ -116,7 +116,8 @@ func move(k,dir):
 		#set_linear_velocity(dir * speed * 50)
 
 func jumpen():
-	print("jo")
+	var curV = get_linear_velocity()
+	set_linear_velocity(Vector3(curV.x, Jump_Speed, curV.z))
 	if not in_air:
 		var curV = get_linear_velocity()
 		set_linear_velocity(Vector3(curV.x, Jump_Speed, curV.z))
@@ -126,7 +127,8 @@ func jumpen():
 		ray_cast.set_enabled(true)
 		if ray_cast.is_colliding():
 			in_air = false
-			ray_cast.set_enabled(false)
+		ray_cast.set_enabled(false)
+		
 func destroyClickedBlock():
 	print(destroy_oneBlock)
 	var ray = get_node("Camera/RayClick")
@@ -135,9 +137,9 @@ func destroyClickedBlock():
 	if ray.get_collider() != null:
 		var pos = ray.get_collider().get_translation()
 		
-		get_node("/root/Node").chunk_dict[Vector2(0,0)].remove_block(pos)
+		utils.get_chunc_by_coord(get_node("/root/Node").chunk_dict,pos).remove_block(pos)
 		destroy_oneBlock = true
-		
+	
 func get_pos_int():
 	var g = get_translation()
 	return Vector3(round(g.x),round(g.y),round(g.z))

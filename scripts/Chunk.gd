@@ -1,11 +1,11 @@
 #Timo Kandra
 
 var isgenerated = false
-var isReady = false
+var BlocksAtSurfaceCreated = false
 var isbuilded = false
 var isColliderCreated = false
 var isShown = false
-var isPhysic = false
+#var isPhysic = false
 
 var shouldBeShown = false
 var wg
@@ -16,43 +16,51 @@ var blocks_at_surface = []
 var collsion_blocks = []
 var position
 var surfaceIndex
-
+var surface = SurfaceTool.new()
 var packed_Collider = load("CubeCollider.scn")
 
 var generateCoord
 var generateStatus = 10
 var thread = Thread.new()
+
 # variablen fuer mehr_frame actionen
-var x_for_filling = 0
-var z_for_filling = 0
-var index_build_old = 0.0
-var x_for_generate = 0
+#var x_for_filling = 0
+#var z_for_filling = 0
+#var index_build_old = 0.0
+#var x_for_generate = 0
 # variablen fuer mehr_frame actionen
 
 func _init(pos, wordGeneratorNode):
 	datatool = MeshDataTool.new()
 	isgenerated = false
-	isReady = false
+	BlocksAtSurfaceCreated = false
 	isbuilded = false
-	x_for_generate = pos.x
+	#x_for_generate = pos.x
 	wg = wordGeneratorNode
 	position = pos
-
-func process():
-	if not isgenerated:
-		generate()
-	elif not isReady:
-		makeReady()
-	elif not isColliderCreated:
-		#block_collider_initialisation()
-		isColliderCreated = true
-	elif not isbuilded:
-	 	build_chunk(position)
-	else:
-		print("chunc already isgenerated, isReady, isbuilded")
-
+	
 func generate_prepare():
-	wg.processing_chunks.append(self)
+	#wg.processing_chunks.append(self)
+	if not thread.is_active():
+		#print(Thread.PRIORITY_LOW, " prio")
+		thread.start(self, "process", null, 0)
+#	else:
+#		thread.wait_to_finish()
+
+func process(l):
+	if not isgenerated:
+		
+		generate()#done
+		
+	if not BlocksAtSurfaceCreated:
+		#print("filling started")
+		fill_blocks_at_surface_list()#done
+		#print("filled")
+		#print("isbuilded ",isbuilded)
+	if not isbuilded:
+		build_chunk(position)
+
+	return 0
 
 func show():
 	if isbuilded:
@@ -66,6 +74,7 @@ func hide():
 		var mesh = wg.wg_mesh.get_mesh()
 		mesh.surface_remove(surfaceIndex)
 		print("surface removed ",surfaceIndex)
+		#correct all other chuncs indices that thex still can access the right surface
 		for c in wg.chunk_dict:
 			if wg.get_surfaceIndex(c) != null:
 				var index = wg.get_surfaceIndex(c)
@@ -76,6 +85,7 @@ func get_surfaceIndex():
 	return surfaceIndex
 	
 func generate():
+	
 	#if not (posVector3(pos.x + int(wg.CHUNK_SIZE),0 ,pos.y + int(wg.CHUNK_SIZE)) in wg.voxel.keys()):
 	for x in range(position.x, wg.CHUNK_SIZE + position.x ):
 	# var x =  x_for_generate
@@ -89,28 +99,33 @@ func generate():
 			#worldHeight += (((wg.simplex.simplex2(xforsim,yforsim)+1)*0.5) * 4)
 		
 			for y in range(worldHeight):
-				ChunkVoxel[Vector3(x,y,z)] = 1
+				ChunkVoxel[[x,y,z]] = 1#Vector3(x,y,z)] = 1
 			
 	#	x_for_generate += 1
 	#else:
 	isgenerated = true
 
-func makeReady():
-	if x_for_filling >= wg.CHUNK_SIZE:
-		x_for_filling = 0
-		z_for_filling += 1
-	if z_for_filling >= wg.CHUNK_SIZE:
-		generateStatus = 0
-		isReady = true
-
-	else:
-		for a in range(4):
-			fill_blocks_at_surface_list(x_for_filling,z_for_filling)
-			x_for_filling += 1
+	
+func fill_blocks_at_surface_list():
+	for x in range(wg.CHUNK_SIZE):
+		#yield(wg.get_tree(),"idle_frame")
+		for z in range(wg.CHUNK_SIZE):
+			#yield(wg.get_tree(),"idle_frame")
+			fill_blocks_at_surface_list_at(x,z)
+#	if x_for_filling >= wg.CHUNK_SIZE:
+#		x_for_filling = 0
+#		z_for_filling += 1
+#	if z_for_filling >= wg.CHUNK_SIZE:
+#		generateStatus = 0
+#		BlocksAtSurfaceCreated = true
+#
+#	else:
+#		for a in range(4):
+#			fill_blocks_at_surface_list(x_for_filling,z_for_filling)
+#			x_for_filling += 1
 			
 
-func fill_blocks_at_surface_list(x,z):
-		#for z in range(16):
+func fill_blocks_at_surface_list_at(x,z):
 		for y in range(wg.HEIGHT):
 			var pos_to_check = Vector3(position.x + x, y, position.y + z)
 			if check_voxel(pos_to_check):
@@ -128,77 +143,121 @@ func check_if_surface_voxel(pos):
 				return true
 	return false
 
-func block_collider_initialisation():
-	var world = wg.get_node("/root/Node/world")
-	for pos in blocks_at_surface:
-		var col = packed_Collider.instance()
-		collsion_blocks.append(col)
-		col.translate(pos)
+#func block_collider_initialisation():
+#	var world = wg.get_node("/root/Node/world")
+#	for pos in blocks_at_surface:
+#		var col = packed_Collider.instance()
+#		collsion_blocks.append(col)
+#		col.translate(pos)
 
-	isColliderCreated = true
+#	isColliderCreated = true
 	
-func activate_physic():
-	if not thread.is_active():
-		#print("activate thread started")
-		thread.start(self,"aactivate_physic")
-	else:
-		thread.wait_to_finish()
+#func activate_physic():
+#	if not thread.is_active():
+#		#print("activate thread started")
+#		thread.start(self,"aactivate_physic")
+#	else:
+#		thread.wait_to_finish()
 		#print("tried to start active thread")
 	
-func aactivate_physic(trash):
+#func aactivate_physic(trash):
 	
-	if not isPhysic and isColliderCreated:
-		var world = wg.get_node("world")
-		var blocks_per_frame = 100
-		var counter = 0
-		for c in collsion_blocks:#range(10):
-			if c.get_parent() != world:
-				counter += 1
-				world.call_deferred("add_child",(c))
-				if counter > blocks_per_frame:
-					counter = 0
-					yield(world.get_tree(),"idle_frame")
+#	if not isPhysic and isColliderCreated:
+#		var world = wg.get_node("world")
+#		var blocks_per_frame = 100
+#		var counter = 0
+#		for c in collsion_blocks:#range(10):
+#			if c.get_parent() != world:
+#				counter += 1
+#				world.call_deferred("add_child",(c))
+#				if counter > blocks_per_frame:
+#					counter = 0
+#					yield(world.get_tree(),"idle_frame")
 		#max einen chunc pro frame bauen dann sollte das genuegend performace geben
-		print("physics are created")
-		isPhysic = true
+#		print("physics are created")
+#		isPhysic = true
 		
-func deactivate_physic(trash):
-	if not thread.is_active():
+#func deactivate_physic(trash):
+#	if not thread.is_active():
 		#print("deactivate thread started")
-		thread.start(self,"ddeactivate_physic")
-	else:
-		thread.wait_to_finish()
+#		thread.start(self,"ddeactivate_physic")
+#	else:
+#		thread.wait_to_finish()
 		#print("tried to start deactive thread")
 		
-func ddeactivate_physic():
+#func ddeactivate_physic():
 	
-	if isPhysic:
-		var world = wg.get_node("world")
-		#for i in range(world.get_child_count()):    
-		var blocks_per_frame = 10
-		var counter = 0
-		print("!start colbblockcreation")
-		for c in collsion_blocks: 
-			if c.get_parent() == world:
-				world.call_deferred("remove_child",c)
-				if counter > blocks_per_frame:
-					counter = 0
-					yield(world.get_tree(),"idle_frame")
+#	if isPhysic:
+#		var world = wg.get_node("world")
+#		#for i in range(world.get_child_count()):    
+#		var blocks_per_frame = 10
+#		var counter = 0
+#		print("!start colbblockcreation")
+#		for c in collsion_blocks: 
+#			if c.get_parent() == world:
+#				world.call_deferred("remove_child",c)
+#				if counter > blocks_per_frame:
+#					counter = 0
+#					yield(world.get_tree(),"idle_frame")
 		#erstaml alles in eine Liste reinhauen und dann jedes frame etwas davon löschen
 		# in einer weiteren process function oder sogar in die momentane mit ifs integriert......
 		#diese liste wird erst bearbeitet wenn die anderen chunks gebaut worden sind
 			#world.remove_child(world.get_child(0))
-		isPhysic = false
+#		isPhysic = false
 		
 		
 func remove_block(pos):
 	print(pos)
 	if pos in blocks_at_surface:
-		var mesh = wg.wg_mesh.get_mesh()
-		wg.surface.begin(VisualServer.PRIMITIVE_TRIANGLES)
-		wg.surface.set_material(wg.material)
-		ChunkVoxel.erase(pos)
+		
+		ChunkVoxel.erase(vec_to_int(pos))
 		blocks_at_surface.erase(pos)
+		
+		var mesh = wg.wg_mesh.get_mesh()
+		datatool.create_from_surface(mesh, surfaceIndex)
+		
+		surface.begin(VisualServer.PRIMITIVE_TRIANGLES)
+		surface.set_material(wg.material)
+		
+		
+		for fI in range(datatool.get_face_count()):
+			var v_pos = datatool.get_vertex(datatool.get_face_vertex(fI,0)) #bekomme index eines verts der face
+			var diff = pos - v_pos
+			var needed = true
+			if abs(diff.x) == 0.5 and abs(diff.y) == 0.5 and abs(diff.z) == 0.5: #cheken ob es überhaupt in frage kommt
+				var counter_for_all_verts_of_the_face = 1
+				for i in range(2):
+					var checkVector = pos - datatool.get_vertex(datatool.get_face_vertex(fI,i+1))
+					if abs(checkVector.x) == 0.5 and abs(checkVector.y) == 0.5 and abs(checkVector.z) == 0.5: #fuer alle anderen verts der face checken
+						counter_for_all_verts_of_the_face += 1
+					if counter_for_all_verts_of_the_face == 3:#wenn alle teil einer zu löschendn face sind dann face nicht machen
+						needed = false
+			if needed:
+				for i in range(3):
+					var vIndex = datatool.get_face_vertex(fI,i)
+					surface.add_uv(datatool.get_vertex_uv(vIndex))
+					surface.add_normal(datatool.get_vertex_normal(vIndex))
+					surface.add_vertex(datatool.get_vertex(vIndex))
+			else:
+				print("wurden nicht gebraucht")
+		for voxel_r in check_surrounding_voxel_normal(pos):
+			var voxel_pos = pos + voxel_r
+			if not voxel_pos in blocks_at_surface:
+				#print("added ",voxel_pos," to vox at surface")
+				blocks_at_surface.push_back(voxel_pos)
+			face_at(voxel_pos,-voxel_r,1)#ChunkVoxel[voxel_pos])muss noch nach voxeln im anderen chunc suchen
+		
+		#datatool.create_from_surface(surface.commit(), 0)
+		hide()
+		show()
+		#isShown = true
+		#shouldBeShown = true
+		#surfaceIndex = mesh.get_surface_count()
+		#yield(wg.get_tree(),"idle_frame")
+		#mesh = surface.commit(mesh)
+		
+		#datatool.commit_to_surface(mesh)
+		wg.get_node("Player").collider.refresh(wg.get_node("Player").get_pos_int())
 		
 	#	for vI in range(datatool.get_vertex_count()):
 	#		var v_pos = datatool.get_vertex(vI)
@@ -226,76 +285,49 @@ func remove_block(pos):
 			#else:
 				#print("not needed: ",v_pos,"nor ist: ",v_n)
 		
-		for fI in range(datatool.get_face_count()):
-			var v_pos = datatool.get_vertex(datatool.get_face_vertex(fI,0)) #bekomme index eines verts der face
-			var diff = pos - v_pos
-			var needed = true
-			if abs(diff.x) == 0.5 and abs(diff.y) == 0.5 and abs(diff.z) == 0.5: #cheken ob es überhaupt in frage kommt
-				var counter_for_all_verts_of_the_face = 1
-				for i in range(2):
-					var checkVector = pos - datatool.get_vertex(datatool.get_face_vertex(fI,i+1))
-					if abs(checkVector.x) == 0.5 and abs(checkVector.y) == 0.5 and abs(checkVector.z) == 0.5: #fuer alle anderen verts der face checken
-						counter_for_all_verts_of_the_face += 1
-					if counter_for_all_verts_of_the_face == 3:#wenn alle teil einer zu löschendn face sind dann face nicht machen
-						needed = false
-			if needed:
-				for i in range(3):
-					var vIndex = datatool.get_face_vertex(fI,i)
-					wg.surface.add_uv(datatool.get_vertex_uv(vIndex))
-					wg.surface.add_normal(datatool.get_vertex_normal(vIndex))
-					wg.surface.add_vertex(datatool.get_vertex(vIndex))
-			else:
-				print("wurden nicht gebraucht")
-		for voxel_r in check_surrounding_voxel_normal(pos):
-			var voxel_pos = pos + voxel_r
-			if not voxel_pos in blocks_at_surface:
-				print("added ",voxel_pos," to vox at surface")
-				blocks_at_surface.push_back(voxel_pos)
-			face_at(voxel_pos,-voxel_r,1)#ChunkVoxel[voxel_pos])muss noch nach voxeln im anderen chunc suchen
 		
-		datatool.create_from_surface(wg.surface.commit(), 0)
-		hide()
-		isShown = true
-		shouldBeShown = true
-		surfaceIndex = mesh.get_surface_count()
-		datatool.commit_to_surface(mesh)
-		wg.get_node("Player").collider.refresh(wg.get_node("Player").get_pos_int())
-		print("surface added ",surfaceIndex)
 		
 func build_chunk(pos):
+	
+#	if generateStatus == 0:
+	surface.begin(VisualServer.PRIMITIVE_TRIANGLES)
+	generateStatus = 1
 
-	if generateStatus == 0:
-		wg.surface.begin(VisualServer.PRIMITIVE_TRIANGLES)
-		generateStatus = 1
-
-	if generateStatus == 1:
-		var buildspeed = 50
+#	if generateStatus == 1:
+#	var buildspeed = 50
 	#wenn index von blocks_at_surface ueberschritten werden wuerde
-		if index_build_old + buildspeed > blocks_at_surface.size():
-			buildspeed = blocks_at_surface.size() - index_build_old
-			generateStatus = 2
+#		if index_build_old + buildspeed > blocks_at_surface.size():
+#			buildspeed = blocks_at_surface.size() - index_build_old
+#			generateStatus = 2
 	##
-		for index in range(index_build_old,index_build_old + buildspeed):
-			cube_at(blocks_at_surface[index],check_surrounding_voxel(blocks_at_surface[index]), ChunkVoxel[blocks_at_surface[index]])
-		index_build_old += buildspeed
+#		for index in range(index_build_old,index_build_old + buildspeed):
+	for index in range(blocks_at_surface.size()):
+#		print(index)
+		#yield(wg.get_tree(),"idle_frame")
+		cube_at(blocks_at_surface[index],check_surrounding_voxel(blocks_at_surface[index]), ChunkVoxel[vec_to_int(blocks_at_surface[index])])
+#		index_build_old += buildspeed
 
-	if generateStatus == 2:
+#	if generateStatus == 2:
 		#print("generation is done now the chunc should be shown because: ",shouldBeShown)
-		isbuilded = true
+	isbuilded = true
 		#wg.surface.index()
-		datatool.create_from_surface(wg.surface.commit(), 0)
-		#print("datatool created ",isbuilded)
-		if shouldBeShown:
-			show_execute()
+	#print("datatool created ",surface)
+	#datatool.create_from_surface(surface.commit(), 0)
+	#print("datatool created ",isbuilded)
+	if shouldBeShown:
+		show_execute()
 
 func show_execute():
+	#wg.already_show_this_frame = true
+	#print("done")
 	#print("show",isbuilded,isShown)
 	if isbuilded and not isShown:
 		isShown = true
 		var mesh = wg.wg_mesh.get_mesh()
-
 		surfaceIndex = mesh.get_surface_count()
-		datatool.commit_to_surface(mesh)
+		print("surface added ",surfaceIndex)
+		mesh = surface.call_deferred("commit",mesh)
+		#datatool.call_deferred("commit_to_surface",mesh)
 
 func check_voxel(v_pos):
 	
@@ -305,7 +337,7 @@ func check_voxel(v_pos):
 	var bis_z = position.y + wg.CHUNK_SIZE - 1
 	#im aktuellem chunk
 	if von_x <= v_pos.x and v_pos.x <= bis_x    and   von_z <= v_pos.z and v_pos.z <= bis_z:
-		return v_pos in ChunkVoxel
+		return vec_to_int(v_pos) in ChunkVoxel
 	else:
 		return wg.check_voxel(v_pos)
 	return false
@@ -383,10 +415,12 @@ func face_at(pos,normal,type):
 	var order_v  = [ 2   , 0   , 1   ,1    , 3   , 2   ]
 	var order_uv = uvInfo[0]#[[1,0],[1,1],[0,1],[0,1],[0,0],[1,0]]
 	for v in range(6):
-		wg.surface.set_material(wg.material)
-		wg.surface.add_uv((uv_offset * uv_size) + (uv_size * Vector2(order_uv[v][0],order_uv[v][1])))
-		wg.surface.add_normal(normal)
-		wg.surface.add_vertex(verts[order_v[v]] + pos)
+		surface.set_material(wg.material)
+		surface.add_uv((uv_offset * uv_size) + (uv_size * Vector2(order_uv[v][0],order_uv[v][1])))
+		surface.add_normal(normal)
+		surface.add_vertex(verts[order_v[v]] + pos)
+
+
 
 func calcUV(type,normal):
 	var uv_orderList = [[1,0],[1,1],[0,1],[0,1],[0,0],[1,0]]
@@ -394,3 +428,9 @@ func calcUV(type,normal):
 	if type == 1 and normal == Vector3(0,1,0):
 		uvoffset = Vector2(0,0)
 	return [uv_orderList,uvoffset]
+	
+func vec_to_int(v):
+	return [int(v.x),int(v.y),int(v.z)]
+	
+func int_to_vec(i):
+	return Vector3(i[0],i[1],i[2])
