@@ -34,8 +34,8 @@ func _ready():
 #	print(simplex.simplex2(0.1,0.1))
 	wg_mesh = get_node("wg")
 	surface = SurfaceTool.new()
-	#set_process(true)
-	#set_process_input(true)
+	set_process(true)
+	set_process_input(true)
 #	set_fixed_process(true)
 
 #	create_chunc_at(Vector2(0,0))
