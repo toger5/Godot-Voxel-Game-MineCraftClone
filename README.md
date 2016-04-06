@@ -18,7 +18,7 @@ If you want to test the game:
 
 Until now there are only a few things working:  
 - [x] there is a randomly created voxel engine based on dictionaries
-- [x] A surface mehs is generated where neede with proper UV mapping
+- [x] A surface mesh is generated where needed with proper UV mapping
 - [x] Physic bodies are created so there is interaction with the world
 - [x] Basic character controls to explore the world...
 
