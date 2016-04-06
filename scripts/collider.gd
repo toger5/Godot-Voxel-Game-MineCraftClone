@@ -7,6 +7,7 @@ var wg
 var character
 var spital
 var size
+
 func _init(siz,pos,char,spit):
 	spital = spit
 	size = siz
